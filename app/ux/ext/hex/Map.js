@@ -6,27 +6,25 @@ Ext.define('Ext.ux.hex.Map', {
 		'Ext.Ajax', 
 		'Ext.data.Store', 
 		'Ext.ux.hex.model.Hex',
+		'Ext.ux.hex.store.Hex',
+		'Ext.ux.hex.model.HexTileset',
 		'Ext.ux.hex.Hex'
 	],
 	config : {
 		url : undefined,
+		tileset : undefined,
 		mapSize : undefined,
 		store : undefined,
 
 		hexWidth : 84,
 		hexHeight: 72,
 
-		canvas : true
+		canvas : true,
+		zPD : undefined
 	},
 
 	initialize : function(){
-		this.setStore(Ext.create('Ext.data.Store', {
-			model : 'Ext.ux.hex.model.Hex',
-			sorters : [{
-				property : 'location',
-				direction : 'asc'
-			}]
-		}));
+		this.setStore(Ext.create('Ext.ux.hex.store.Hex'));
 		this.on('resize', this.resizeCanvas, this);
 		this.callParent(arguments);
 	},
@@ -36,6 +34,14 @@ Ext.define('Ext.ux.hex.Map', {
 			canvas = Raphael(this.getEl().dom, this.getWidth(), this.getHeight());
 		}
 		return canvas;
+	},
+
+	updateCanvas : function(canvas){
+		var zpd;
+		if(canvas instanceof Raphael){
+			zpd = new RaphaelZPD(canvas, { zoom: true, pan: true, drag: false });
+			this.setZPD(zpd);
+		}
 	},
 
 	// getCanvas : function(id){
@@ -95,7 +101,6 @@ Ext.define('Ext.ux.hex.Map', {
 		this.setMapSize(size);
 
 		// Parse through map items and instantiate them
-		// this.getCanvas().setStart();
 		Ext.each(data, function(hex){
 			if(Ext.isEmpty(hex) || hex.indexOf("end") !== -1){
 				return;
@@ -107,26 +112,38 @@ Ext.define('Ext.ux.hex.Map', {
 				coord 		: { x : Ext.num(hex[1].substring(0,String(size.width).length)), y : Ext.num(hex[1].substring(String(size.width).length)) },
 				elevation 	: hex[2],
 				terrain 	: hex[3],
-				theme 		: hex[4],
+				theme 		: hex[4]
 			});
 			store.add(hex);
 		}, this);
-		// var hexes = this.getCanvas().setFinish();
-		// hexes.attr({fill: "orange"});
 
 		store.sort();
 	},
 
 	buildMap : function(){
-		var store = this.getStore(),
+		var me = this,
+			store = this.getStore(),
 			canvas = this.getCanvas();
 
 		store.each(function(record){
 			var sprite = Ext.create('Ext.ux.hex.Hex',{
 				canvas : canvas,
-				record : record
+				record : record,
+				listeners : {
+					click : me.onHexClick,
+					scope: this
+				}
 			});
 			record.set('node', sprite);
 		}, this);
+	},
+
+	onHexClick : function(hex){
+		var neighbors = this.getStore().getNeighors(hex.getRecord());
+		console.log(hex, neighbors);
+
+		Ext.each(neighbors, function(record){
+			
+		})
 	}
 })

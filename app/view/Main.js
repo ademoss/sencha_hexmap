@@ -17,7 +17,7 @@ Ext.define('HexMap.view.Main', {
                 // },
 
                 styleHtmlContent: true,
-                scrollable: true,
+                scrollable: false,
                 // layout : 'fit',
                 items: [{
                     docked: 'top',
@@ -25,7 +25,8 @@ Ext.define('HexMap.view.Main', {
                     title: 'Welcome to Sencha Touch 2'
                 },{
                     xtype : 'hex-map',
-                    url : 'resources/boards/boxcanyon.board'
+                    url : 'resources/boards/boxcanyon.board',
+                    tileset : 'resources/images/hexes/atmospheric.tileset'
                 }]
             }
         ]

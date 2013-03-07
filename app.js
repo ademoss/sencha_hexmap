@@ -14,7 +14,8 @@ Ext.application({
     name: 'HexMap',
 
     requires: [
-        'Ext.MessageBox'
+        'Ext.MessageBox',
+        'Ext.ux.hex.model.HexTileset'
     ],
 
     views: ['Main'],

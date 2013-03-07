@@ -1,4 +1,6 @@
 Ext.define('Ext.ux.hex.Hex', {
+	extend : 'Ext.Evented',
+
 	config : {
 		// basePath : 'resources/images/hexes/',
 		// imageUrl : undefined,
@@ -37,10 +39,6 @@ Ext.define('Ext.ux.hex.Hex', {
 		}
 		coord.x =((coord.x-1) * width)-(distanceApart*(coord.x-1));
 
-		// Coords start at left middle of hex
-		// coord.x = (coord.x-1) * width;
-		// coord.y = coord.y * (height / 2);
-
 		return coord;
 	},
 
@@ -55,7 +53,7 @@ Ext.define('Ext.ux.hex.Hex', {
 			coord = this.getCoord(),
 			canvas = this.getCanvas(),
 			location = record.get('location'),
-			group = canvas.group(),
+			group = canvas.set(),
 			me = this,
 			cellNumber,
 			elevation;
@@ -71,51 +69,45 @@ Ext.define('Ext.ux.hex.Hex', {
 		path.push('l',width*.25,',',-height*.5,' ');
 
 		var hex = canvas.path(path.join(''));
-		// var hex = canvas.add({
-		// 	type: 'path',
-		// 	path : path.join(''),
-		// 	fillStyle: me.getFillStyle(record)
-		// });
+		group.push(hex);
+
 		coordString = record.get('coord');
 		coordString = Ext.String.leftPad(coordString.x, 2, '0')+Ext.String.leftPad(coordString.y, 2, '0');
-		// console.log(coord.x, coord.y, coordString);
+
 		var pattern = hex.attr({
 			"fill" : me.getFillStyle(record)
 			// "fill" : 'url('+this.getImg(record)+')'
-			// ,"stroke-dasharray" : '-',
-			// "stroke-width" : 1
 		});
+
+		// var p = canvas.rect(coord.x, coord.y, width, height);
+		// var pa = p.attr({
+		// 	"fill" : 'url(resources/images/hexes/transparent/light_smoke.png)',
+		// 	'stroke-width' : 0
+		// });
+		// group.push(p);
+
 		cellNumber = canvas.text(coord.x+(width*.5),coord.y+10,coordString);
+		group.push(cellNumber);
 
 		if(record.get('elevation') != 0){
 			elevation = canvas.text(coord.x+(width*.5),coord.y+height-10,'LEVEL '+record.get('elevation'));				
+			group.push(elevation);
 		}
 
 		hex.click(function(e,x,y){
-			// debugger;
+			me.fireEvent('click', me);
 		});
 
 		hex.hover(function(){
-			// this.toFront();
-			// group.toFront();
-			hex.transform("r90");
+			group.toFront();
 			hex.attr({
-				"stroke" : 'green',
-				// "fill" : 'url('+me.getImg(record)+')'
+				"stroke" : 'green'
 			});
 		},function(){
-			hex.transform("r0");
 			hex.attr({
-				"stroke" : 'black',
-				// "fill" : 'url('+me.getImg(record)+')'
+				"stroke" : 'black'
 			});
 		});
-
-
-		group.push(hex);
-		cellNumber && group.push(cellNumber);
-		elevation && group.push(elevation);
-		
 	},
 
 	colors : {
