@@ -20,11 +20,12 @@ Ext.define('Ext.ux.hex.reader.megamek.Tileset',{
         }
 
         // getData expects an array of data in the case that getResponseData ever gets overridden to support multiple tilesheets
-        return [responseText.split(this.quoteChar).join('').split("\r").join('').split("\n")];
+        return [responseText.split("\r").join('').split("\n")];
 	},
 
 	getData : function(data){
-        var superTiles = [],
+        var me = this,
+            superTiles = [],
             baseTiles = [],
             commentChar = this.commentChar,
             emptyChar = this.emptyChar,
@@ -40,7 +41,7 @@ Ext.define('Ext.ux.hex.reader.megamek.Tileset',{
                     if(line[0] === commentChar || line === emptyChar){
                         return;
                     }
-                    temp = line.split(' ');
+                    temp = line.split(/\s+/).join(' ').split(me.quoteChar).join('').split(' ');
                     temp = {
                         priority : temp[0],
                         elevation : temp[1],

@@ -20,7 +20,8 @@ Ext.define('Ext.ux.hex.Map', {
 		hexHeight: 72,
 
 		canvas : true,
-		zPD : undefined
+		zPD : undefined,
+		tileset : undefined
 	},
 
 	initialize : function(){
@@ -64,6 +65,23 @@ Ext.define('Ext.ux.hex.Map', {
 				Ext.Msg.alert('Map Data Load Failure!');
 			}
 		})
+	},
+
+	applyTileset : function(tileset){
+		var me = this;
+		if(Ext.isString(tileset)){
+			tileset = Ext.ux.hex.model.HexTileset.loadUrl(tileset, { callback : function(record){
+				me.setTileset(record);
+			}});
+		} else if(tileset instanceof Ext.ux.hex.model.HexTileset){
+			return tileset
+		} else {
+			return undefined;
+		}
+	},
+
+	updateTileset : function(tileset){
+		this.fireEvent('tilesetloaded', this, tileset);
 	},
 
 	applyMapSize : function(size){
@@ -123,12 +141,19 @@ Ext.define('Ext.ux.hex.Map', {
 	buildMap : function(){
 		var me = this,
 			store = this.getStore(),
-			canvas = this.getCanvas();
+			canvas = this.getCanvas(),
+			tileset = this.getTileset();
+
+		if(!tileset){
+			this.on('tilesetloaded', this.buildMap, this, { single : true } );
+			return;
+		}
 
 		store.each(function(record){
 			var sprite = Ext.create('Ext.ux.hex.Hex',{
 				canvas : canvas,
 				record : record,
+				tileset : tileset,
 				listeners : {
 					click : me.onHexClick,
 					scope: this

@@ -14,11 +14,13 @@ Ext.define('Ext.ux.hex.model.HexTileset', {
 		},
 
 		hasMany : [
-			{ model : 'Ext.ux.hex.model.Tile', name : 'super', associationKey : 'super' },
-			{ model : 'Ext.ux.hex.model.Tile', name : 'base', associationKey : 'base' }
+			{ model : 'Ext.ux.hex.model.Hex', name : 'super', associationKey : 'super' },
+			{ model : 'Ext.ux.hex.model.Hex', name : 'base', associationKey : 'base' }
 		],
 		hexImageCache : true
 	},
+
+	WILDCARD : '*',
 
 	statics : {
 		/**
@@ -45,6 +47,19 @@ Ext.define('Ext.ux.hex.model.HexTileset', {
 		return cache;
 	},
 
+	buildHexId : function(hex){
+		var hexId = hex.get('theme') + hex.get('elevation'),
+			terrains = [];
+
+		Ext.each(hex.get('terrain'), function(t){
+			terrains.push(t.name + t.elevation + t.exits);
+		});
+
+		hexId = hexId + terrains.join(';');
+
+		return hexId;
+	},
+
 	/**
 	 * getTile takes a terrain and grabs the best match for a tile record.
 	 * @param  {int} elevation [description]
@@ -55,7 +70,7 @@ Ext.define('Ext.ux.hex.model.HexTileset', {
 		var me = this,
 			hexCopy, supers, base, tiles,
 			hexImageCache = this.getHexImageCache(),
-			hexId = hex.get('elevation') + hex.get('terrain');
+			hexId = me.buildHexId(hex);
 
 		if(hexImageCache){
 			tiles = hexImageCache.getByKey(hexId);
@@ -78,25 +93,150 @@ Ext.define('Ext.ux.hex.model.HexTileset', {
 	},
 
 	supersFor : function(hex){
-		return ['TESTING SUPER'];
+		var me = this,
+			matches = [];
+		this.super().each(function(tile){
+			if (me.superMatch(hex, tile) >= 1.0) {
+				matches.push(tile.getImage());
+				me.removeMatchingTerrains(hex, tile);
+			}
+		});
+		return matches.length > 0 ? matches : undefined;
 	},
 
 	baseFor : function(hex){
-		return ['TESTING BASE'];
+		var me = this,
+			bestMatch,
+			match = -1;
+
+		this.base().each(function(tile){
+			var matchValue = me.baseMatch(hex, tile);
+
+			// stop if perfect match
+            if (matchValue == 1.0) {
+                bestMatch = tile;
+                return false;
+            }
+            // compare match with best
+            if (matchValue > match) {
+                bestMatch = tile;
+                match = matchValue;
+            }
+		});
+		return bestMatch.getImage();
 	},
 	
-	matchSuper : function(hex){
-		// var me = this,
-		// 	superStore = this.super(),
-		// 	matches = [];
+	/**
+	 * [superMatch description]
+	 * 
+     * Match the two hexes using the "super" formula. All matches must be exact,
+     * however the match only depends on the original hex matching all the
+     * elements of the comparision, not vice versa. <p/> EXCEPTION: a themed
+     * original matches any unthemed comparason.
+     *
+	 * @param  {[type]} hex  [description]
+	 * @param  {[type]} tile [description]
+	 * @return {[type]}      [description]
+	 */
+	superMatch : function(hex, tile){
+		var me = this, match = 0;
 
-		// superStore.each(function(entry){
-		// 	if(me.matchSuper(hex, entry) >= 1.0){
-		// 		matches.push(entry.getImage());
-		// 		me.removeMatchingTerrains(hex, entry)
-		// 	}
-		// })
+		// Elevation either must be a wildcard or match to continue
+		if(tile.get('elevation') !== me.WILDCARD
+			 	&& hex.get('elevation') != tile.get('elevation')){
+			return 0;
+		}
+
+		Ext.iterate(Ext.ux.hex.model.Hex.Terrains, function(key, t){
+			var hTerrain = hex.getTerrain(t),
+				tTerrain = tile.getTerrain(t);
+			if(!tTerrain){
+				return;
+			} else if(!hTerrain 
+				|| (tTerrain.elevation !== me.WILDCARD 
+						&& tTerrain.elevation != hTerrain.elevation )
+				|| (tTerrain.exits !== "" && hTerrain.exits != tTerrain.exits) 
+			){
+				match = 0;
+	        	return false;
+			}
+
+			// A themed original matches any unthemed comparason.
+	        if (tile.get('theme') !== ""
+	                && tile.get('theme').toLowerCase() !== hex.get('theme').toLowerCase()) {
+	            match = 0.0;
+	        	return false;
+	        }
+
+	        match = 1.0;
+	        return false;
+		});
+		return match;
 	},
+
+	 /**
+     * Match the two hexes using the "base" formula. <p/> Returns a value
+     * indicating how close of a match the original hex is to the comparison
+     * hex. 0 means no match, 1 means perfect match.
+     */
+    baseMatch : function(hex, tile){
+    	var me = this, 
+    		elevation, 
+    		terrain, 
+    		theme, 
+    		maxTerrains,
+    		matches = 0.0;
+
+    	// check elevation
+        if (tile.get('elevation') == me.WILDCARD) {
+            elevation = 1.0;
+        } else {
+            elevation = 1.01 / (Math.abs(hex.get('elevation')
+                    - tile.get('elevation')) + 1.01);
+        }
+
+     	maxTerrains = Math.max(hex.get('terrain').length, tile.get('terrain').length);
+     	Ext.iterate(Ext.ux.hex.model.Hex.Terrains, function(key, t){
+			var hTerrain = hex.getTerrain(t),
+				tTerrain = tile.getTerrain(t),
+				thisMatch = 0;
+
+			if (!tTerrain || !hTerrain) {
+                return;
+            }
+
+            if (hTerrain.elevation == me.WILDCARD) {
+                thisMatch = 1.0;
+            } else {
+                thisMatch = 1.0 / (Math.abs(tTerrain.elevation - hTerrain.elevation) + 1.0);
+            }
+
+            // without exit match, terrain counts... um, half?
+            if (hTerrain.exits !== ""
+                    && tTerrain.exits != hTerrain.exits) {
+                thisMatch *= 0.5;
+            }
+            // add up match value
+            matches += thisMatch;
+        });
+
+        if (maxTerrains == 0) {
+            terrain = 1.0;
+        } else {
+            terrain = matches / maxTerrains;
+        }
+
+        // check theme
+        if (tile.get('theme') == hex.get('theme')
+                || (tile.get('theme') != "" && tile.get('theme').toLowerCase() === hex.get('theme').toLowerCase() )) {
+            theme = 1.0;
+        } else {
+            // also don't throw a match entirely out because the theme is off
+            theme = 0.0001;
+        }
+
+        return elevation * terrain * theme;
+    },
 
 	/**
 	 * [getBase description]
@@ -104,14 +244,17 @@ Ext.define('Ext.ux.hex.model.HexTileset', {
 	 * @return {[type]}     [description]
 	 */
 	getBase : function(hex){
-		return this.getTiles()['base'];
+		return this.getTiles(hex)['base'];
 	},
 
 	getSupers : function(hex){
-		return this.getTiles()['supers'];
+		return this.getTiles(hex)['supers'];
 	},
 
 	removeMatchingTerrains : function(hex, tile){
-
+		Ext.iterate(Ext.ux.hex.model.Hex.Terrains, function(key, t){
+			var tTerrain = tile.getTerrain(t);
+			tTerrain && hex.removeTerrain(t);
+		});
 	}
 });

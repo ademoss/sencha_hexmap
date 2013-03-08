@@ -2,7 +2,7 @@ Ext.define('Ext.ux.hex.Hex', {
 	extend : 'Ext.Evented',
 
 	config : {
-		// basePath : 'resources/images/hexes/',
+		basePath : 'resources/images/hexes/',
 		// imageUrl : undefined,
 		record : undefined,
 		coord : true,
@@ -10,7 +10,8 @@ Ext.define('Ext.ux.hex.Hex', {
 		width : 84,
 		canvas : undefined,
 		height: 72,
-		group : undefined
+		group : undefined,
+		tileset : undefined
 	},
 
 	constructor : function(config){
@@ -74,17 +75,21 @@ Ext.define('Ext.ux.hex.Hex', {
 		coordString = record.get('coord');
 		coordString = Ext.String.leftPad(coordString.x, 2, '0')+Ext.String.leftPad(coordString.y, 2, '0');
 
-		var pattern = hex.attr({
-			"fill" : me.getFillStyle(record)
-			// "fill" : 'url('+this.getImg(record)+')'
+		var tiles = this.getTileset().getTiles(record);
+
+		hex.attr({
+			// "fill" : me.getFillStyle(record)
+			"fill" : 'url('+this.getImg(record, tiles)+')'
 		});
 
-		// var p = canvas.rect(coord.x, coord.y, width, height);
-		// var pa = p.attr({
-		// 	"fill" : 'url(resources/images/hexes/transparent/light_smoke.png)',
-		// 	'stroke-width' : 0
-		// });
-		// group.push(p);
+		Ext.each(tiles.supers, function(superImg){
+			var rect = canvas.rect(coord.x, coord.y, width, height);
+			rect.attr({
+				"fill" : 'url('+me.getBasePath() + superImg + ')',
+				'stroke-width' : 0
+			});
+			group.push(rect);
+		});
 
 		cellNumber = canvas.text(coord.x+(width*.5),coord.y+10,coordString);
 		group.push(cellNumber);
@@ -110,17 +115,19 @@ Ext.define('Ext.ux.hex.Hex', {
 		});
 	},
 
-	colors : {
+	/*colors : {
 		default : ['ffff00','cccc00','aaaa00','999900','888800','777700','666600','555500','444400','333300','222200','111100'],
 		woods : ['00ff00','00cc00','00aa00','009900','008800','007700','006600','005500','004400','003300','002200','001100'],
 		water : ['0000ff','0000cc','0000aa','000099','000088','000077','000066','000055','000044','000033','000022','000011'],
 		rough : ['cccccc','c0c0c0','a0a0a0','909090','808080','707070','606060','505050','404040','303030','202020','101010']
 
-	},
+	},*/
 
-	getFillStyle : function(record){
-		var terrain = record.get('terrain'),
+	/*getFillStyle : function(record){
+		var tiles = this.getTileset().getTiles(record),
 			fillStyle = 'yellow';
+			//boring/beige_plains_0.gif
+		debugger;
 
 		if(terrain.indexOf('woods') !== -1){
 			fillStyle = '#'+this.colors.woods[Math.abs(record.get('elevation'))];
@@ -132,22 +139,11 @@ Ext.define('Ext.ux.hex.Hex', {
 			fillStyle = '#'+this.colors.default[Math.abs(record.get('elevation'))];
 		}
 		return fillStyle;
-	},
+	},*/
 
-	getImg : function(record){
-		var terrain = record.get('terrain'),
-			path = 'resources/images/hexes/';
-
-		if(terrain.indexOf('woods') !== -1){
-			path = path + 'grass/grass_h_woods_0.gif';
-		} else if(terrain.indexOf('rough') !== -1){
-			path = path + 'boring/beige_rough_0.gif';
-		} else if(terrain.indexOf('water') !== -1){
-			path = path + 'boring/blue_water_1.gif';
-		} else {
-			path = path + 'grass/grass_plains_0.gif';
-		}
-		// console.log(terrain, path);
+	getImg : function(record, tiles){
+		var path = this.getBasePath();
+		path = path + tiles.base;
 		return path;
 	}
 })
