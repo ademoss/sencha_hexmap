@@ -75,7 +75,7 @@ Ext.define('Ext.ux.hex.model.HexTileset', {
 		if(hexImageCache){
 			tiles = hexImageCache.getByKey(hexId);
 		}
-
+		
 		if(!tiles){
 			console.log('cache hit');
 			hexCopy = hex.copy();
@@ -101,6 +101,10 @@ Ext.define('Ext.ux.hex.model.HexTileset', {
 				me.removeMatchingTerrains(hex, tile);
 			}
 		});
+		// Fix a bug where no terrain matches anything
+		if(hex.get('terrain').length === 0){
+			hex.set('terrain','');
+		}
 		return matches.length > 0 ? matches : undefined;
 	},
 
