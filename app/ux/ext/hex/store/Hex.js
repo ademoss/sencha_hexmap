@@ -11,17 +11,23 @@ Ext.define('Ext.ux.hex.store.Hex',{
 		var location = Ext.num(record.get('location')),
 			coord = record.get('coord'),
 			lastCoord = this.last().get('coord'),
-			// coord.y !== lastCoord.y
-			neighbors = [
-				this.getById(Ext.String.leftPad(location-1, 4, "0")),
-				// Bottom tiles don't have a north east hex, instead the south east hex takes its place
-				coord.y !== lastCoord.y ? this.getById(Ext.String.leftPad(location+99, 4, "0")) : undefined,
-				this.getById(Ext.String.leftPad(location+100, 4, "0")),
-				this.getById(Ext.String.leftPad(location+1, 4, "0")),
-				// Top tiles don't have a south west hex, instead the north west hex takes its place
-				coord.y !== 1 ? this.getById(Ext.String.leftPad(location-99, 4, "0")) : undefined,
-				this.getById(Ext.String.leftPad(location-100, 4, "0"))
-			];
-		return Ext.Array.clean(neighbors);
+			neighbors = {};
+
+			neighbors.north = this.getById(Ext.String.leftPad(location-1, 4, "0"));
+			neighbors.south = this.getById(Ext.String.leftPad(location+1, 4, "0"));
+
+			if(coord.x % 2 === 0){
+				neighbors.northwest = this.getById(Ext.String.leftPad(location-100, 4, "0"));
+				neighbors.northeast = this.getById(Ext.String.leftPad(location+100, 4, "0"))
+				neighbors.southwest = this.getById(Ext.String.leftPad(location-99, 4, "0"));
+				neighbors.southeast = this.getById(Ext.String.leftPad(location+101, 4, "0"))
+			} else {
+				neighbors.northwest = this.getById(Ext.String.leftPad(location-101, 4, "0"));
+				neighbors.northeast = this.getById(Ext.String.leftPad(location+99, 4, "0"))
+				neighbors.southwest = this.getById(Ext.String.leftPad(location-100, 4, "0"));
+				neighbors.southeast = this.getById(Ext.String.leftPad(location+100, 4, "0"))
+			}
+			
+		return neighbors;
 	}
 });

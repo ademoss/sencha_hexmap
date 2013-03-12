@@ -11,7 +11,8 @@ Ext.define('Ext.ux.hex.Hex', {
 		canvas : undefined,
 		height: 72,
 		group : undefined,
-		tileset : undefined
+		tileset : undefined,
+		path : undefined
 	},
 
 	constructor : function(config){
@@ -43,12 +44,35 @@ Ext.define('Ext.ux.hex.Hex', {
 		return coord;
 	},
 
+	updateCoord : function(coord){
+		this.setPath(true);
+	},
+
+	applyPath : function(path){
+		var coord = this.getCoord(),
+			width = this.getWidth(),
+			height = this.getHeight();
+
+		if(path === true){
+			path = [];
+			path.push('M',coord.x+(width*.25),',',coord.y,' ');
+			path.push('l',width*.5,',',0,' ');
+			path.push('l',width*.25,',',height*.5,' ');
+			path.push('l',-width*.25,',',height*.5,' ');
+			path.push('l',-width*.5,',',0,' ');
+			path.push('l',-width*.25,',',-height*.5,' ');
+			path.push('l',width*.25,',',-height*.5,' ');
+			path = path.join('');
+		}
+		return path;
+	},
+
 	updateRecord : function(record){
 		this.setCoord(Ext.apply({}, record.get('coord')));
 	},
 
 	buildBackground : function(record){
-		var path = [],
+		var path = this.getPath(),
 			width = this.getWidth(),
 			height = this.getHeight(),
 			coord = this.getCoord(),
@@ -61,15 +85,7 @@ Ext.define('Ext.ux.hex.Hex', {
 
 		this.setGroup(group);
 
-		path.push('M',coord.x+(width*.25),',',coord.y,' ');
-		path.push('l',width*.5,',',0,' ');
-		path.push('l',width*.25,',',height*.5,' ');
-		path.push('l',-width*.25,',',height*.5,' ');
-		path.push('l',-width*.5,',',0,' ');
-		path.push('l',-width*.25,',',-height*.5,' ');
-		path.push('l',width*.25,',',-height*.5,' ');
-
-		var hex = canvas.path(path.join(''));
+		var hex = canvas.path(path);
 		group.push(hex);
 
 		coordString = record.get('coord');
@@ -83,7 +99,7 @@ Ext.define('Ext.ux.hex.Hex', {
 		});
 
 		Ext.each(tiles.supers, function(superImg){
-			var rect = canvas.rect(coord.x, coord.y, width, height);
+			var rect = canvas.path(path);
 			rect.attr({
 				"fill" : 'url('+me.getBasePath() + superImg + ')',
 				'stroke-width' : 0
@@ -99,12 +115,12 @@ Ext.define('Ext.ux.hex.Hex', {
 			group.push(elevation);
 		}
 
-		hex.click(function(e,x,y){
+		group.click(function(e,x,y){
 			me.fireEvent('click', me);
 		});
 
-		hex.hover(function(){
-			group.toFront();
+		group.hover(function(){
+			// group.toFront();
 			hex.attr({
 				"stroke" : 'green'
 			});

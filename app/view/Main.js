@@ -25,7 +25,8 @@ Ext.define('HexMap.view.Main', {
                     title: 'Welcome to Sencha Touch 2'
                 },{
                     xtype : 'hex-map',
-                    url : 'resources/boards/boxcanyon.board',
+                    // url : 'resources/boards/boxcanyon.board',
+                    url : 'resources/boards/tallassia6_country_road_ii.board',
                     // url : 'resources/boards/unofficial/dropport1_with_fuel_tanks.board',
                     tileset : 'resources/images/hexes/atmospheric.tileset'
                 }]

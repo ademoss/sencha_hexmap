@@ -25,6 +25,8 @@ Ext.define('Ext.ux.hex.Map', {
 	},
 
 	initialize : function(){
+		this.paths = [];
+		this.overlays = [];
 		this.setStore(Ext.create('Ext.ux.hex.store.Hex'));
 		this.on('resize', this.resizeCanvas, this);
 		this.callParent(arguments);
@@ -163,12 +165,253 @@ Ext.define('Ext.ux.hex.Map', {
 		}, this);
 	},
 
-	onHexClick : function(hex){
-		var neighbors = this.getStore().getNeighors(hex.getRecord());
-		console.log(hex, neighbors);
+	hexesClicked : [],
 
-		Ext.each(neighbors, function(record){
-			
-		})
+	onHexClick : function(hex){
+		if(this.hexesClicked.indexOf(hex) > -1){
+			Ext.Array.remove(this.hexesClicked, hex);
+			hex.glow.remove();
+		} else if(this.hexesClicked.length === 2) {
+			this.hexesClicked.pop().glow.remove();
+			hex.glow = hex.getGroup()[0].glow({ fill : false, color: 'red' });
+			hex.glow.toFront();
+			this.hexesClicked.push(hex);
+		} else {
+			hex.glow = hex.getGroup()[0].glow({ fill : false, color: 'red' });
+			hex.glow.toFront();
+			this.hexesClicked.push(hex);
+		}
+
+		if(this.hexesClicked.length < 2){
+			this.clearPath();
+		} else {
+			this.displayPath.apply(this, this.hexesClicked);
+		}
+	},
+
+	clearPath : function(hex1, hex2){
+		Ext.each(this.overlays, function(overlay){
+			overlay.remove();
+		});
+		this.path = [];
+		this.overlays = [];
+	},
+
+	displayPath: function(start, end, keepExisting){
+		var start = start instanceof Ext.data.Model ? start : start.getRecord(),
+			end = end instanceof Ext.data.Model ? end : end.getRecord(),
+			canvas = this.getCanvas();
+
+		if(keepExisting !== true){
+			this.clearPath();
+		}
+
+		var path = this.getPath(start, end);
+		this.path.push(path);
+		return path;
+	},
+
+	getNodeByRecord : function(record, list){
+		var node;
+		for(var i = 0, l = list.length; i < l; i++){
+			if(list[i].record === record){
+				node = list[i];
+				break;
+			}
+		}
+		return node;
+	},
+
+	showPathOverlay : function(pathNode, attributes){
+		var record = pathNode.record,
+			parentRecord = pathNode.parent ? pathNode.parent.record : undefined,
+			node = record.get('node'),
+			coord = node.getCoord(),
+			pathCoord = record.get('coord'),
+			parentCoord = parentRecord ? parentRecord.get('coord') : {},
+			direction = 'none',
+			hexWidth = node.getWidth(),
+			hexHeight = node.getHeight(),
+			arrowStartX = coord.x + hexWidth/2,
+			arrowStartY = coord.y + hexHeight/2,
+			canvas = this.getCanvas(),
+			path = ['M',arrowStartX,',',arrowStartY,' '],
+			pX = parentCoord.x,
+			pY = parentCoord.y,
+			nX = pathCoord.x,
+			nY = pathCoord.y;
+
+		attributes = attributes || {};
+
+		if(pathNode.overlay){
+			Ext.Array.remove(this.overlays, pathNode.overlay);
+			pathNode.overlay.remove();
+		}
+
+		if(pX %2 === 0){
+			pY = pY +1;
+		}
+		if(nX %2 === 0){
+			nY = nY + 1;
+		}
+
+		if(pX && pY){
+			if(pY > nY){
+				direction = 'south';
+ 			} else {
+ 				direction = 'north';
+ 			}
+			if(pX > nX){
+				direction = direction + 'east';
+			} else if(pX < nX) {
+				direction = direction + 'west';
+			}
+		}
+
+		if(direction === 'none'){
+			path.push('l,0,1');
+		} else if(direction === 'north') {
+			path.push('l,0,-20');
+		} else if(direction === 'northeast') {
+			path.push('l,20,-20');
+		} else if(direction === 'east') {
+			path.push('l,20,0');
+		} else if(direction === 'southeast') {
+			path.push('l,20,20');
+		} else if(direction === 'south') {
+			path.push('l,0,20');
+		} else if(direction === 'southwest') {
+			path.push('l,-20,20');
+		} else if(direction === 'northwest') {
+			path.push('l,-20,-20');
+		}
+		console.log(pathCoord.x,pathCoord.y,' ',direction, path.join(''));
+		var path = canvas.path(path.join(''));
+		path.attr(Ext.apply({
+			"arrow-end" : direction === 'none' ? 'none' : 'classic-5',
+			"stroke-width" : 5
+		},attributes));
+		pathNode.overlay = path;
+
+		this.overlays.push(path);
+	},
+
+	applyNodeScore : function(node, parentNode, endRecord){
+		var me = this, costToEnd, costFromParent, score,
+			record = node.record,
+			parentRecord = parentNode.record;
+
+		costToEnd = me.estimateDistance(record, endRecord);
+		costFromParent = record.getMovementCost(parentRecord) + parentNode.costFromParent;
+		score = costToEnd + costFromParent;
+
+		node.costFromParent = costFromParent;
+		node.costToEnd = costToEnd;
+		node.score = score;
+	},
+
+	/**
+	 * Basis for A* taken from http://www.policyalmanac.org/games/aStarTutorial.htm
+	 * @param  {[type]} startRecord [description]
+	 * @param  {[type]} endRecord   [description]
+	 * @return {[type]}             [description]
+	 */
+	getPath : function(startRecord, endRecord){
+		var me = this,
+			openList = [],
+			closedList = [],
+			parentRecord = startRecord,
+			parentNode = { record : parentRecord, costFromParent : 0 , score : 0 },
+			neighbors,
+			store = me.getStore(),
+			bestNode,
+			lowestScore;
+
+		while(parentRecord !== endRecord){
+			// Gather all pathable neighbors
+			neighbors = store.getNeighors(parentRecord);
+			Ext.iterate(neighbors, function(key, record){
+				var oNode;
+				if(record && record.isPathable(parentRecord)){
+					oNode = me.getNodeByRecord(record, openList);
+					cNode = me.getNodeByRecord(record, closedList);
+					if(oNode){
+						if(!cNode && oNode.record.getMovementCost(parentRecord) + parentNode.costFromParent < oNode.costFromParent){
+							me.applyNodeScore(oNode, parentNode, endRecord);
+							oNode.parent = parentNode;
+						}
+					} else if(!cNode) {
+						openList.push({ record : record, parent : parentNode });
+					}
+				}
+			});
+
+			if(openList.length === 0){
+				throw 'PATH NOT FOUND';
+				return undefined;
+			}
+
+			closedList.push(parentNode);
+			Ext.Array.remove(openList, parentNode);
+
+			parentNode.overlay && parentNode.overlay.remove();
+			this.showPathOverlay(parentNode);
+
+			bestNode = undefined;
+			lowestScore = undefined;
+			Ext.each(openList, function(node){
+				var distance, score, costFromStart, costToEnd,
+					record = node.record;
+
+				if(node.score === undefined){
+					me.applyNodeScore(node, parentNode, endRecord);
+				}
+
+				if(lowestScore === undefined || node.score + parentNode.score < lowestScore){
+					lowestScore = node.score;
+					bestNode = node;
+				}
+			});
+			parentNode = bestNode;
+			parentRecord = bestNode.record;
+		}
+
+		var n = parentNode;
+		do{
+			this.showPathOverlay(n, { stroke : 'green' });
+			n = n.parent;
+		} while(n)
+
+		return parentNode;
+	},
+
+	/**
+	 * Logic for estimating distance using the Manhattan method
+	 * @param  {[type]} startNode [description]
+	 * @param  {[type]} endNode   [description]
+	 * @return {[type]}           [description]
+	 */
+	estimateDistance : function(start, end){
+		var dx, dy, 
+			sX = start.get('coord').x,
+			sY = start.get('coord').y,
+			eX = end.get('coord').x,
+			eY = end.get('coord').y;
+
+		// if(sX % 2 === 0){
+		// 	sY + 1;
+		// }
+
+		// if(eX % 2 === 0){
+		// 	eY + 1;
+		// }
+
+		dx = Math.abs(sX - eX);
+		dy = Math.abs(sY - eY) - Math.ceil(dx/2);
+
+		if (dy < 0){
+			dy = 0;
+		}
+		return dx + dy;
 	}
 })

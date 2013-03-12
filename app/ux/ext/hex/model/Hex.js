@@ -9,6 +9,7 @@
 	Ext.define('Ext.ux.hex.model.Hex', {
 		extend : 'Ext.data.Model',
 		config : {
+			idProperty : 'location',
 			fields : [
 				{ name : 'priority', convert : clean },		// base || super || hex || octo
 				{ name : 'elevation' }, 	// what elevation a given tile works with. can be * for all
@@ -37,7 +38,8 @@
 				{ name : 'theme', convert : clean }, 		// specific theme in which to apply this tile to.
 				{ name : 'image', convert : splitString }, 		// semicolon delimited string of tile image paths
 				'coord',
-				'node'
+				'node',
+				'location'
 			],
 			proxy : {
 				type : 'ajax',
@@ -75,6 +77,38 @@
 					return false;
 				}
 			});
+		},
+
+		/**
+		 * [isPathable description]
+		 * @param  {[type]}  from assumes a record instance which is a neighbor of this
+		 * @return {Boolean}      [description]
+		 */
+		isPathable : function(from){
+			var me = this,
+				pathable = true,
+				unpathableTerrains = [
+					'water', 'building', 'impassable'
+				]
+			Ext.each(unpathableTerrains, function(t){
+				if(me.getTerrain(t)){
+					pathable = false;
+					return false;
+				}
+			});
+			if(pathable && from){
+				if(Math.abs(this.get('elevation') - from.get('elevation')) > 1){
+					pathable = false;
+				}
+
+				// TODO add exit handling
+			}
+			return pathable;
+		},
+
+		getMovementCost : function(start){
+			// TODO add cost for more types of terrains
+			return this.getTerrain('none') ? 1 : 2;
 		},
 
 		statics : {
