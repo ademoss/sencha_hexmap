@@ -12,13 +12,10 @@ Ext.define('HexMap.view.Main', {
             {
                 title: 'Welcome',
                 iconCls: 'home',
-                // scrollable : {
-                //     direction : 'both'
-                // },
-
+                scrollable : {
+                    direction : 'both'
+                },
                 styleHtmlContent: true,
-                scrollable: false,
-                // layout : 'fit',
                 items: [{
                     docked: 'top',
                     xtype: 'titlebar',

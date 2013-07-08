@@ -1,6 +1,5 @@
 Ext.define('Ext.ux.hex.Map', {
-	// extend : 'Ext.draw.Component',
-	extend : 'Ext.Component',
+	extend : 'Ext.draw.Component',
 	alias : 'widget.hex-map',
 	requires : [
 		'Ext.Ajax', 
@@ -18,8 +17,6 @@ Ext.define('Ext.ux.hex.Map', {
 
 		hexWidth : 84,
 		hexHeight: 72,
-
-		canvas : true,
 		zPD : undefined,
 		tileset : undefined
 	},
@@ -32,36 +29,17 @@ Ext.define('Ext.ux.hex.Map', {
 		this.callParent(arguments);
 	},
 
-	applyCanvas : function(canvas){
-		if(canvas === true){
-			canvas = Raphael(this.getEl().dom, this.getWidth(), this.getHeight());
-		}
-		return canvas;
+	getCanvas : function(id){
+		return this.getSurface(id);
 	},
-
-	updateCanvas : function(canvas){
-		var zpd;
-		if(canvas instanceof Raphael){
-			zpd = new RaphaelZPD(canvas, { zoom: true, pan: true, drag: false });
-			this.setZPD(zpd);
-		}
-	},
-
-	// getCanvas : function(id){
-	// 	return this.getSurface(id);
-	// },
 
 	updateUrl : function(url){
 		Ext.Ajax.request({
 			url : url,
 			scope : this,
 			success : function(response){
-				// console.profile('Parse Data');
 				this.parseMapData(response.responseText);
-				// console.profileEnd();
-				// console.profile('Build Map');
 				this.buildMap();
-				// console.profileEnd();
 			},
 			failure : function(response){
 				Ext.Msg.alert('Map Data Load Failure!');
@@ -73,7 +51,9 @@ Ext.define('Ext.ux.hex.Map', {
 		var me = this;
 		if(Ext.isString(tileset)){
 			tileset = Ext.ux.hex.model.HexTileset.loadUrl(tileset, { callback : function(record){
+				console.profile('Building Tiles');
 				me.setTileset(record);
+				console.profileEnd();
 			}});
 		} else if(tileset instanceof Ext.ux.hex.model.HexTileset){
 			return tileset
@@ -94,13 +74,12 @@ Ext.define('Ext.ux.hex.Map', {
 	},
 
 	updateMapSize : function(size){
-		// this.setSize((1.75*84) + ((size.width-2)*.75*84), (72*size.height) + (size.height*2) + 3);
-		this.getCanvas().setSize((1.75*84) + ((size.width-2)*.75*84), (72*size.height) + (size.height*2) + 3);
+		this.setSize((1.75*84) + ((size.width-2)*.75*84), (72*size.height) + (size.height*2) + 3);
 	},
 
 	resizeCanvas : function(cmp, size){
 		var canvas = this.getCanvas();
-		// canvas.setViewBox(0, 0, size.width, size.height);
+		this.setViewBox(0, 0, size.width, size.height);
 	},
 
 	parseMapData : function(data){
@@ -168,47 +147,47 @@ Ext.define('Ext.ux.hex.Map', {
 	hexesClicked : [],
 
 	onHexClick : function(hex){
-		if(this.hexesClicked.indexOf(hex) > -1){
-			Ext.Array.remove(this.hexesClicked, hex);
-			hex.glow.remove();
-		} else if(this.hexesClicked.length === 2) {
-			this.hexesClicked.pop().glow.remove();
-			hex.glow = hex.getGroup()[0].glow({ fill : false, color: 'red' });
-			hex.glow.toFront();
-			this.hexesClicked.push(hex);
-		} else {
-			hex.glow = hex.getGroup()[0].glow({ fill : false, color: 'red' });
-			hex.glow.toFront();
-			this.hexesClicked.push(hex);
-		}
+		// if(this.hexesClicked.indexOf(hex) > -1){
+		// 	Ext.Array.remove(this.hexesClicked, hex);
+		// 	hex.glow.remove();
+		// } else if(this.hexesClicked.length === 2) {
+		// 	this.hexesClicked.pop().glow.remove();
+		// 	hex.glow = hex.getGroup()[0].glow({ fill : false, color: 'red' });
+		// 	hex.glow.toFront();
+		// 	this.hexesClicked.push(hex);
+		// } else {
+		// 	hex.glow = hex.getGroup()[0].glow({ fill : false, color: 'red' });
+		// 	hex.glow.toFront();
+		// 	this.hexesClicked.push(hex);
+		// }
 
-		if(this.hexesClicked.length < 2){
-			this.clearPath();
-		} else {
-			this.displayPath.apply(this, this.hexesClicked);
-		}
+		// if(this.hexesClicked.length < 2){
+		// 	this.clearPath();
+		// } else {
+		// 	this.displayPath.apply(this, this.hexesClicked);
+		// }
 	},
 
 	clearPath : function(hex1, hex2){
-		Ext.each(this.overlays, function(overlay){
-			overlay.remove();
-		});
-		this.path = [];
-		this.overlays = [];
+		// Ext.each(this.overlays, function(overlay){
+		// 	overlay.remove();
+		// });
+		// this.path = [];
+		// this.overlays = [];
 	},
 
 	displayPath: function(start, end, keepExisting){
-		var start = start instanceof Ext.data.Model ? start : start.getRecord(),
-			end = end instanceof Ext.data.Model ? end : end.getRecord(),
-			canvas = this.getCanvas();
+		// var start = start instanceof Ext.data.Model ? start : start.getRecord(),
+		// 	end = end instanceof Ext.data.Model ? end : end.getRecord(),
+		// 	canvas = this.getCanvas();
 
-		if(keepExisting !== true){
-			this.clearPath();
-		}
+		// if(keepExisting !== true){
+		// 	this.clearPath();
+		// }
 
-		var path = this.getPath(start, end);
-		this.path.push(path);
-		return path;
+		// var path = this.getPath(start, end);
+		// this.path.push(path);
+		// return path;
 	},
 
 	getNodeByRecord : function(record, list){
@@ -397,14 +376,6 @@ Ext.define('Ext.ux.hex.Map', {
 			sY = start.get('coord').y,
 			eX = end.get('coord').x,
 			eY = end.get('coord').y;
-
-		// if(sX % 2 === 0){
-		// 	sY + 1;
-		// }
-
-		// if(eX % 2 === 0){
-		// 	eY + 1;
-		// }
 
 		dx = Math.abs(sX - eX);
 		dy = Math.abs(sY - eY) - Math.ceil(dx/2);
