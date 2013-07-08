@@ -94,13 +94,19 @@ Ext.define('Ext.ux.hex.model.HexTileset', {
 
 	supersFor : function(hex){
 		var me = this,
-			matches = [];
-		this.super().each(function(tile){
+			matches = [],
+			tile,
+			supers = this.super().getRange();
+// console.log(supers);
+		for(var i = 0, len = supers.length; i < len; i++){
+		// this.super().each(function(tile){
+			tile = supers[i];
 			if (me.superMatch(hex, tile) >= 1.0) {
 				matches.push(tile.getImage());
 				me.removeMatchingTerrains(hex, tile);
 			}
-		});
+		}
+		// });
 		// Fix a bug where no terrain matches anything
 		if(hex.get('terrain').length === 0){
 			hex.set('terrain','');
@@ -151,30 +157,42 @@ Ext.define('Ext.ux.hex.model.HexTileset', {
 			return 0;
 		}
 
-		Ext.iterate(Ext.ux.hex.model.Hex.Terrains, function(key, t){
-			var hTerrain = hex.getTerrain(t),
-				tTerrain = tile.getTerrain(t);
+		var hTerrain,
+     		tTerrain,
+     		key,
+     		terrain,
+     		terrains = Ext.ux.hex.model.Hex.Terrains;
+
+     	for(key in terrains){
+     		if(!terrains.hasOwnProperty(key)){
+     			continue;
+     		}
+     		terrain = terrains[key];
+     		hTerrain = hex.getTerrain(terrain);
+			tTerrain = tile.getTerrain(terrain);
+
 			if(!tTerrain){
-				return;
+				continue;
 			} else if(!hTerrain 
 				|| (tTerrain.elevation !== me.WILDCARD 
 						&& tTerrain.elevation != hTerrain.elevation )
 				|| (tTerrain.exits !== "" && hTerrain.exits != tTerrain.exits) 
 			){
 				match = 0;
-	        	return false;
+	        	break;
 			}
 
 			// A themed original matches any unthemed comparason.
 	        if (tile.get('theme') !== ""
 	                && tile.get('theme').toLowerCase() !== hex.get('theme').toLowerCase()) {
 	            match = 0.0;
-	        	return false;
+	        	break;
 	        }
 
 	        match = 1.0;
-	        return false;
-		});
+	        break;
+		}
+
 		return match;
 	},
 
@@ -200,13 +218,25 @@ Ext.define('Ext.ux.hex.model.HexTileset', {
         }
 
      	maxTerrains = Math.max(hex.get('terrain').length, tile.get('terrain').length);
-     	Ext.iterate(Ext.ux.hex.model.Hex.Terrains, function(key, t){
-			var hTerrain = hex.getTerrain(t),
-				tTerrain = tile.getTerrain(t),
-				thisMatch = 0;
+
+     	var hTerrain,
+     		tTerrain,
+     		thisMatch = 0, 
+     		key,
+     		terrain,
+     		terrains = Ext.ux.hex.model.Hex.Terrains;
+
+     	for(key in terrains){
+     		if(!terrains.hasOwnProperty(key)){
+     			continue;
+     		}
+     		terrain = terrains[key];
+     		hTerrain = hex.getTerrain(terrain);
+			tTerrain = tile.getTerrain(terrain);
+			thisMatch = 0;
 
 			if (!tTerrain || !hTerrain) {
-                return;
+                continue;
             }
 
             if (hTerrain.elevation == me.WILDCARD) {
@@ -222,7 +252,8 @@ Ext.define('Ext.ux.hex.model.HexTileset', {
             }
             // add up match value
             matches += thisMatch;
-        });
+
+     	}
 
         if (maxTerrains == 0) {
             terrain = 1.0;
