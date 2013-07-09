@@ -78,7 +78,7 @@ Ext.define('Ext.ux.hex.Hex', {
 			coord = this.getCoord(),
 			canvas = this.getCanvas(),
 			location = record.get('location'),
-			group = Ext.id(),
+			group = record.getId(),
 			me = this,
 			cellNumber,
 			elevation;

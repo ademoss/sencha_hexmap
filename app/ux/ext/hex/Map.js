@@ -27,6 +27,7 @@ Ext.define('Ext.ux.hex.Map', {
 		this.setStore(Ext.create('Ext.ux.hex.store.Hex'));
 		this.on('resize', this.resizeCanvas, this);
 		this.callParent(arguments);
+		this.mon(this.getSurface().el, 'click', this.onClick, this);
 	},
 
 	getCanvas : function(id){
@@ -145,6 +146,84 @@ Ext.define('Ext.ux.hex.Map', {
 	},
 
 	hexesClicked : [],
+
+	// Detect if a hex is clicked and notify
+	onClick : function(e){
+		var coord = [e.event.offsetX, e.event.offsetY],
+			hexLocationX,
+			x, y,
+			width = this.getHexWidth(),
+			height = this.getHexHeight(),
+			canvas = this.getSurface().canvases[0].dom.getContext('2d'),
+			store = this.getStore();
+
+		// Get the hexLocationX
+		var hexRecord = (function(){
+			var aproxXLocation = coord[0]/(width*.75),
+				minHexX = Math.floor(aproxXLocation),
+				maxHexX = Math.ceil(aproxXLocation),
+
+				aproxYLocation = coord[1]/(height),
+				minHexY = Math.floor(aproxYLocation),
+				maxHexY = Math.ceil(aproxYLocation),
+
+				recordToCheck,
+				path, isInPath;
+
+			// Check Location 1
+			recordToCheck = store.findRecord('location', Ext.String.leftPad(minHexX, 2, '0')+Ext.String.leftPad(minHexY, 2, '0'));
+			if(recordToCheck){
+				path = new Ext.draw.Path(recordToCheck.get('node').getPath());
+				canvas.appendPath(path);
+				isInPath = canvas.isPointInPath(coord[0], coord[1]);
+				console.log('Location 1', recordToCheck.get('location'), isInPath);
+				if(isInPath){
+					return recordToCheck;
+				}
+
+			}
+
+			// Check Location 2
+			recordToCheck = store.findRecord('location', Ext.String.leftPad(minHexX, 2, '0')+Ext.String.leftPad(maxHexY, 2, '0'));
+			if(recordToCheck){
+				path = new Ext.draw.Path(recordToCheck.get('node').getPath());
+				canvas.appendPath(path);
+				isInPath = canvas.isPointInPath(coord[0], coord[1]);
+				console.log('Location 2', recordToCheck.get('location'), isInPath);
+				if(isInPath){
+					return recordToCheck;
+				}
+			}
+
+			// Check Location 3
+			recordToCheck = store.findRecord('location', Ext.String.leftPad(maxHexX, 2, '0')+Ext.String.leftPad(minHexY, 2, '0'));
+			if(recordToCheck){
+				path = new Ext.draw.Path(recordToCheck.get('node').getPath());
+				canvas.appendPath(path);
+				isInPath = canvas.isPointInPath(coord[0], coord[1]);
+				console.log('Location 3', recordToCheck.get('location'), isInPath);
+				if(isInPath){
+					return recordToCheck;
+				}
+			}
+
+			// Check Location 4
+			recordToCheck = store.findRecord('location', Ext.String.leftPad(maxHexX, 2, '0')+Ext.String.leftPad(maxHexY, 2, '0'));
+			if(recordToCheck){
+				path = new Ext.draw.Path(recordToCheck.get('node').getPath());
+				canvas.appendPath(path);
+				isInPath = canvas.isPointInPath(coord[0], coord[1]);
+				console.log('Location 4', recordToCheck.get('location'), isInPath);
+				if(isInPath){
+					return recordToCheck;
+				}
+			}
+
+		})();
+
+		console.log('Hex With Event',e.type, hexRecord);
+		
+	},
 
 	onHexClick : function(hex){
 		// if(this.hexesClicked.indexOf(hex) > -1){
