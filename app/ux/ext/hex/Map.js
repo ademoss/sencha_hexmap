@@ -75,7 +75,7 @@ Ext.define('Ext.ux.hex.Map', {
 	},
 
 	updateMapSize : function(size){
-		this.setSize((1.75*84) + ((size.width-2)*.75*84), (72*size.height) + (size.height*2) + 3);
+		this.setSize((1.75*84) + ((size.width-2)*.75*84), (72*size.height) + (size.height*2) + 4);
 	},
 
 	resizeCanvas : function(cmp, size){
@@ -159,6 +159,12 @@ Ext.define('Ext.ux.hex.Map', {
 
 		// Get the hexLocationX
 		var hexRecord = (function(){
+			/** 
+			 * TODO this approximation logic could be improved by:
+			 *  - removing the duplicates if they exist
+			 *  - Adding a check in the height calculation if it is dealing with an offset row
+			 *  - Checking for the square it is in first, before checking based off of hexagonal path
+			 */
 			var aproxXLocation = coord[0]/(width*.75),
 				minHexX = Math.floor(aproxXLocation),
 				maxHexX = Math.ceil(aproxXLocation),
