@@ -40,7 +40,8 @@ Ext.define('Ext.ux.hex.Hex', {
 			coord.y = (coord.y-1) * height;
 		}
 		coord.x =((coord.x-1) * width)-(distanceApart*(coord.x-1));
-
+		coord.y += height/2 + 1;
+		coord.x += width/2;
 		return coord;
 	},
 
@@ -55,13 +56,21 @@ Ext.define('Ext.ux.hex.Hex', {
 
 		if(path === true){
 			path = [];
-			path.push('M',coord.x+(width*.25),',',coord.y,' ');
-			path.push('l',width*.5,',',0,' ');
-			path.push('l',width*.25,',',height*.5,' ');
-			path.push('l',-width*.25,',',height*.5,' ');
-			path.push('l',-width*.5,',',0,' ');
-			path.push('l',-width*.25,',',-height*.5,' ');
-			path.push('l',width*.25,',',-height*.5,' ');
+			// http://www.redblobgames.com/grids/hexagons/#basics
+			var center_x = coord.x, 
+				center_y = coord.y,
+				size = this.getWidth()/2,
+				angle, x_i, y_i;
+			for(var i = 0; i <= 6; i++){
+				angle = 2 * Math.PI / 6 * i;
+			    x_i = (center_x + size * Math.cos(angle));
+			    y_i = (center_y + size * Math.sin(angle));
+			    if (i == 0) {
+			        path.push('M',x_i,',',y_i,' ');
+			    } else {
+					path.push('L',x_i,',',y_i,' ');
+			    }
+			}
 			path = path.join('');
 		}
 		return path;
@@ -84,16 +93,27 @@ Ext.define('Ext.ux.hex.Hex', {
 			elevation;
 
 		var tiles = this.getTileset().getTiles(record);
+
 		var hex = canvas.add({
 			type : 'image',
-			x : coord.x,
-			y : coord.y,
+			x : coord.x-width/2,
+			y : coord.y-height/2,
 			width : this.getWidth(),
 			height: this.getHeight(),
 			path : path, 
 			group : group,
 			src : this.getImg(record, tiles)
 		});
+
+		// For Testing
+		// var hex = canvas.add({
+		// 	type : 'path',
+		// 	path : path, 
+		// 	group : group,
+		// 	"stroke" : 'black',
+		// 	"stroke-width": 1,
+		// 	"fill" : 'rgba(255,0,0,.5)'
+		// });
 
 		coordString = record.get('coord');
 		coordString = Ext.String.leftPad(coordString.x, 2, '0')+Ext.String.leftPad(coordString.y, 2, '0');
@@ -102,8 +122,8 @@ Ext.define('Ext.ux.hex.Hex', {
 		Ext.each(tiles.supers, function(superImg){
 			var rect = canvas.add({
 				type : 'image',
-				x : coord.x,
-				y : coord.y,
+				x : coord.x-width/2,
+				y : coord.y-height/2,
 				width : me.getWidth(),
 				height : me.getHeight(),
 				path : path,
@@ -114,8 +134,8 @@ Ext.define('Ext.ux.hex.Hex', {
 
 		cellNumber = canvas.add({
 			type : 'text',
-			x : coord.x+(width*.5),
-			y : coord.y+10,
+			x : coord.x,
+			y : coord.y,
 			text : coordString,
 			group : group
 		});
@@ -123,7 +143,7 @@ Ext.define('Ext.ux.hex.Hex', {
 		if(record.get('elevation') != 0){		
 			elevation = canvas.add({
 				type : 'text',
-				x : coord.x+(width*.5)-this.getWidth()/4,
+				x : coord.x-this.getWidth()/4,
 				y : coord.y+30,
 				text : 'LEVEL '+record.get('elevation'),
 				group : group
